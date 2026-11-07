@@ -9,6 +9,14 @@ open "build/Vedran's Utilities.app"
 
 Run the tests with `swift test`.
 
+To package a drag-to-install disk image at `build/VedransUtilities-<version>.dmg`:
+
+```bash
+./Scripts/build-dmg.sh
+```
+
+The app is ad-hoc signed, not notarized. On another Mac, macOS will block the first launch until it's allowed under System Settings > Privacy & Security.
+
 ## Memory
 
 Measures bandwidth live, by operation, block size, thread count and processor: performance cores, efficiency cores or GPU.
