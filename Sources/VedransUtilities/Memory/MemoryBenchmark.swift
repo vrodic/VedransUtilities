@@ -467,9 +467,9 @@ final class MemoryBenchController {
         var finished = 0
         activity = .sweeping(done: 0, total: plan.count, kind: kind)
         // Wait for any live engine's teardown so its memory is free first.
-        engineQueue.async {
+        engineQueue.async { [weak self] in
             DispatchQueue.main.async {
-                guard self.sweep === runner else { return }
+                guard let self, self.sweep === runner else { return }
                 runner.start(
                     onEngine: { [weak self] engine, _ in
                         guard let self, self.sweep === runner else { return }

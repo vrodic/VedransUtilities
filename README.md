@@ -19,7 +19,7 @@ The app is ad-hoc signed, not notarized. On another Mac, macOS will block the fi
 
 ## Memory
 
-Measures bandwidth live, by operation, block size, thread count and processor: performance cores, efficiency cores or GPU.
+Measures bandwidth live, with a compact power readout alongside, by operation, block size, thread count and processor: performance cores, efficiency cores or GPU.
 
 - **Read, Write, Copy, Triad, Random.** Kernels are hand-written NEON, so the compiler can't remove or reshape them.
 - **GB/s is decimal.** Following STREAM, Copy counts read + write and Triad counts all three arrays. Random counts one 128-byte line per load, so treat it as a load rate in line-equivalents, not bus traffic: it can exceed the memory interface's rating.
@@ -45,6 +45,18 @@ No admin rights needed. macOS doesn't document these sources, so this is what te
 
 The IOReport `Energy Model` channels most tools use for CPU, DRAM and ANE power (`CPU Energy`, `DRAM`, ...) were frozen on this machine, so they aren't used. Only `GPU Energy` advanced.
 
+## SSD
+
+Reads each NVMe drive's SMART / Health Information log through IOKit's NVMe SMART interface, with no admin rights needed. It shows the drive's wear estimate as life remaining, every critical-warning bit as a health check, media errors, data read and written, power-on time, power cycles, unsafe shutdowns and temperature. It refreshes every 30 seconds.
+
+The read test measures sequential read speed using large files already on the Mac, so it writes nothing. A search thread walks folders any app may read without a privacy prompt (`/Applications`, `/Library`, `/System`, `/opt`, `/usr`, `/Users/Shared`) and hands each file of at least 64 MiB to a reader as soon as it's found. The reader takes them one at a time in 32 MiB requests and stops after 40 GB. Two details keep the result about the drive rather than RAM:
+
+- **Files already in memory are skipped**, checked with `mincore`, because macOS serves cached pages from RAM even with caching off. On this Mac, a cached file read at 24 GB/s against about 6 GB/s from the SSD.
+- **Reads use `F_NOCACHE`**, so the test neither fills RAM nor warms the cache for the next run.
+- **APFS-compressed files are skipped**, because the CPU decompresses them during the read. Rosetta's shared caches, for example, read at 1.3 GB/s while uncompressed files read at 6.2 GB/s.
+
+Data units are 512,000 bytes as the NVMe spec defines them, shown in decimal TB. USB and SATA drives don't pass SMART through to macOS without a third-party driver, so they aren't listed.
+
 ## Launch options
 
-For scripted screenshots and checks: `VU_TAB=power` opens the Power tab, `VU_PROCESSOR=gpu` selects the GPU, and `VU_AUTORUN=live|blocks|threads|map` starts a run.
+For scripted screenshots and checks: `VU_TAB=power` or `VU_TAB=ssd` opens that tab, `VU_PROCESSOR=gpu` selects the GPU, and `VU_AUTORUN=live|blocks|threads|map` starts a memory run, and `VU_TAB=ssd VU_AUTORUN=read` starts the read test.

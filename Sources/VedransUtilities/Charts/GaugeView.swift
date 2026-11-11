@@ -6,6 +6,9 @@ final class GaugeView: DrawnView {
     var caption = "" { didSet { if caption != oldValue { needsDisplay = true } } }
     var tint: NSColor = Theme.blue { didSet { needsDisplay = true } }
     var isActive = false { didSet { needsDisplay = true } }
+    /// A fixed range for bounded values such as percentages; nil auto-scales.
+    var fixedScale: Double? { didSet { if let fixedScale { scaleMax = fixedScale; shownScale = fixedScale } } }
+    var format: (Double) -> String = Format.number
 
     private var target = 0.0
     private var shown = 0.0
@@ -21,17 +24,21 @@ final class GaugeView: DrawnView {
     func set(value: Double, peak: Double) {
         target = value
         self.peak = peak
-        let wanted = Scale.niceCeiling(max(value, peak) * 1.05)
-        // Rise right away, but only fall on a big change, so the scale doesn't hunt.
-        if wanted > scaleMax || wanted < scaleMax * 0.4 { scaleMax = wanted }
+        if let fixedScale {
+            scaleMax = fixedScale
+        } else {
+            let wanted = Scale.niceCeiling(max(value, peak) * 1.05)
+            // Rise right away, but only fall on a big change, so the scale doesn't hunt.
+            if wanted > scaleMax || wanted < scaleMax * 0.4 { scaleMax = wanted }
+        }
         wake()
-        setAccessibilityLabel("\(Format.number(value)) \(unit), peak \(Format.number(peak))")
+        setAccessibilityLabel(peak > 0 ? "\(format(value)) \(unit), peak \(format(peak))" : "\(format(value)) \(unit)")
     }
 
     func reset(keepScale: Bool = false) {
         target = 0
         peak = 0
-        if !keepScale { scaleMax = 10 }
+        if !keepScale { scaleMax = fixedScale ?? 10 }
         wake()
     }
 
@@ -110,7 +117,7 @@ final class GaugeView: DrawnView {
             )
         }
 
-        let readout = isActive || target > 0 ? Format.number(shown) : "—"
+        let readout = isActive || target > 0 ? format(shown) : "—"
         let size = max(30, radius * 0.48)
         let font = Theme.digits(size, .semibold)
         Ink.draw(readout, at: CGPoint(x: center.x, y: center.y - font.pointSize * 0.78), font: font, color: Theme.inkPrimary, align: .center)

@@ -1,7 +1,7 @@
 import AppKit
 
 /// Rows of label and value, for facts that have no shape worth charting.
-private final class FactListView: DrawnView {
+final class FactListView: DrawnView {
     var rows: [(String, String)] = [] { didSet { needsDisplay = true } }
 
     override func draw(_ dirtyRect: NSRect) {
@@ -64,7 +64,9 @@ final class PowerViewController: NSViewController {
         appTile.sparkColor = Theme.inkSecondary
 
         for sample in monitor.history { appendToChart(sample) }
-        monitor.onSample = { [weak self] sample in self?.handle(sample) }
+        NotificationCenter.default.addObserver(forName: .powerSample, object: nil, queue: .main) { [weak self] note in
+            if let sample = note.object as? PowerSample { self?.handle(sample) }
+        }
         monitor.onBattery = { [weak self] status in self?.updateBattery(status) }
         updateBattery(monitor.battery)
     }

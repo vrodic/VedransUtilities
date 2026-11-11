@@ -51,6 +51,8 @@ final class MemoryViewController: NSViewController {
     private let levelHeading = MemoryViewController.heading("Data mostly lives in")
     private let levelView = MemoryLevelView()
     private let lanesCard = CardView(title: "Per thread, GB/s")
+    private let powerCard = CardView(title: "Power")
+    private let powerSummary = PowerSummaryView()
     private var cpuThreads = 4
     private let footprintNote = MemoryViewController.noteLabel()
     private let startButton = NSButton(title: "Start", target: nil, action: nil)
@@ -122,13 +124,15 @@ final class MemoryViewController: NSViewController {
         let chartCard = CardView(title: "Bandwidth, last 60 seconds")
         chartCard.fill(with: liveChart)
         lanesCard.fill(with: lanes)
+        powerCard.fill(with: powerSummary)
+        powerCard.toolTip = "The same readings as the Power tab, so you can see what a test costs while it runs."
         let analysisCard = buildAnalysisCard()
 
         let tileRow = NSStackView(views: [peakTile, averageTile, stabilityTile, perThreadTile, efficiencyTile])
         tileRow.distribution = .fillEqually
         tileRow.spacing = 10
 
-        for item in [sidebar, gaugeCard, chartCard, lanesCard, tileRow, analysisCard] {
+        for item in [sidebar, gaugeCard, chartCard, lanesCard, powerCard, tileRow, analysisCard] {
             item.translatesAutoresizingMaskIntoConstraints = false
             root.addSubview(item)
         }
@@ -161,9 +165,14 @@ final class MemoryViewController: NSViewController {
 
             lanesCard.leadingAnchor.constraint(equalTo: analysisCard.trailingAnchor, constant: 10),
             lanesCard.topAnchor.constraint(equalTo: analysisCard.topAnchor),
-            lanesCard.bottomAnchor.constraint(equalTo: analysisCard.bottomAnchor),
+            lanesCard.bottomAnchor.constraint(equalTo: powerCard.topAnchor, constant: -10),
             lanesCard.trailingAnchor.constraint(equalTo: chartCard.trailingAnchor),
             lanesCard.widthAnchor.constraint(equalToConstant: 212),
+
+            powerCard.leadingAnchor.constraint(equalTo: lanesCard.leadingAnchor),
+            powerCard.trailingAnchor.constraint(equalTo: lanesCard.trailingAnchor),
+            powerCard.bottomAnchor.constraint(equalTo: analysisCard.bottomAnchor),
+            powerCard.heightAnchor.constraint(equalToConstant: 200),
         ])
 
         liveChart.emptyMessage = "Press Start to begin measuring"
@@ -381,6 +390,14 @@ final class MemoryViewController: NSViewController {
             self.updateActiveCell(config)
         }
         controller.onSample = { [weak self] sample in self?.handle(sample) }
+        NotificationCenter.default.addObserver(forName: .powerSample, object: nil, queue: .main) { [weak self] note in
+            guard let self, let sample = note.object as? PowerSample else { return }
+            self.powerSummary.update(sample)
+            // CPU tests are this app's workers; a GPU test's draw sits inside the SoC rail.
+            self.powerSummary.footnote = self.controller.config.processor == .gpu
+                ? ("GPU (within SoC)", sample.gpu)
+                : ("This app's CPU", sample.thisAppCPU)
+        }
     }
 
     /// Averages across a sweep's mixed configurations would mean nothing, so a

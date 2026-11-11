@@ -53,12 +53,16 @@ struct PowerChannelStats {
     }
 }
 
+extension Notification.Name {
+    /// Posted on the main queue with the new `PowerSample` as the object.
+    static let powerSample = Notification.Name("PowerMonitor.sample")
+}
+
 final class PowerMonitor {
     static let shared = PowerMonitor()
     private static let interval = 0.5
     private static let batteryInterval = 5.0
 
-    var onSample: ((PowerSample) -> Void)?
     var onBattery: ((BatteryStatus?) -> Void)?
 
     private(set) var latest: PowerSample?
@@ -150,7 +154,7 @@ final class PowerMonitor {
             latest = sample
             history.append(sample)
             if history.count > Self.historyLimit { history.removeFirst(history.count - Self.historyLimit) }
-            onSample?(sample)
+            NotificationCenter.default.post(name: .powerSample, object: sample)
         }
     }
 

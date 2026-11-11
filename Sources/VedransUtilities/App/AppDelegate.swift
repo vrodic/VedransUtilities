@@ -5,6 +5,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let tabs = NSTabViewController()
     private let memory = MemoryViewController()
     private let power = PowerViewController()
+    private let storage = StorageViewController()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.appearance = NSAppearance(named: .darkAqua)
@@ -17,6 +18,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         tabs.canPropagateSelectedChildViewControllerTitle = false
         addTab(memory, label: "Memory", symbol: "memorychip")
         addTab(power, label: "Power", symbol: "bolt.fill")
+        addTab(storage, label: "SSD", symbol: "internaldrive")
 
         let window = NSWindow(contentViewController: tabs)
         window.title = "Vedran's Utilities"
@@ -36,13 +38,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Lets scripts open the app in a known state, for screenshots and checks.
     private func applyLaunchOptions() {
         let environment = ProcessInfo.processInfo.environment
-        if environment["VU_TAB"] == "power" { tabs.selectedTabViewItemIndex = 1 }
+        if let index = ["memory", "power", "ssd"].firstIndex(of: environment["VU_TAB"] ?? "") {
+            tabs.selectedTabViewItemIndex = index
+        }
         if environment["VU_PROCESSOR"] == "gpu" { memory.selectForLaunch(.gpu) }
         switch environment["VU_AUTORUN"] {
         case "live": memory.startFromLaunch(sweep: nil)
         case "blocks": memory.startFromLaunch(sweep: .blocksAllOperations)
         case "map": memory.startFromLaunch(sweep: .map)
         case "threads": memory.startFromLaunch(sweep: .threads)
+        case "read": storage.startReadBenchmark()
         default: break
         }
     }
@@ -64,6 +69,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func showMemory() { tabs.selectedTabViewItemIndex = 0 }
     @objc private func showPower() { tabs.selectedTabViewItemIndex = 1 }
+    @objc private func showStorage() { tabs.selectedTabViewItemIndex = 2 }
 
     private func buildMenu() -> NSMenu {
         let main = NSMenu()
@@ -80,6 +86,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         memoryItem.target = self
         let powerItem = view.addItem(withTitle: "Power", action: #selector(showPower), keyEquivalent: "2")
         powerItem.target = self
+        let storageItem = view.addItem(withTitle: "SSD", action: #selector(showStorage), keyEquivalent: "3")
+        storageItem.target = self
         main.addItem(submenu(view, title: "View"))
 
         let benchmark = NSMenu(title: "Benchmark")

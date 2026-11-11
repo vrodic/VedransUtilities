@@ -9,14 +9,15 @@ let package = Package(
         // Swift or C optimiser. -O2 still applies to the surrounding worker loop.
         .target(name: "CMemBench", cSettings: [.unsafeFlags(["-O2"])]),
         .target(name: "CPowerProbes", linkerSettings: [.linkedFramework("IOKit"), .linkedFramework("CoreFoundation")]),
+        .target(name: "CStorageProbes", linkerSettings: [.linkedFramework("IOKit"), .linkedFramework("CoreFoundation")]),
         .executableTarget(
             name: "VedransUtilities",
-            dependencies: ["CMemBench", "CPowerProbes"],
+            dependencies: ["CMemBench", "CPowerProbes", "CStorageProbes"],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
         .testTarget(
             name: "VedransUtilitiesTests",
-            dependencies: ["VedransUtilities", "CMemBench"],
+            dependencies: ["VedransUtilities", "CMemBench", "CStorageProbes"],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
     ]
