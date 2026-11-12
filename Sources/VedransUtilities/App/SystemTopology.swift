@@ -27,9 +27,9 @@ struct SystemTopology {
     var efficiency: Cluster
 
     static let current = SystemTopology(
-        chipName: sysctlString("machdep.cpu.brand_string") ?? "Apple Silicon",
-        memoryBytes: sysctlValue("hw.memsize") ?? 0,
-        logicalCPUs: Int(sysctlValue("hw.ncpu") ?? 1),
+        chipName: Sysctl.string("machdep.cpu.brand_string") ?? "Apple Silicon",
+        memoryBytes: Sysctl.value("hw.memsize") ?? 0,
+        logicalCPUs: Int(Sysctl.value("hw.ncpu") ?? 1),
         performance: readCluster(0),
         efficiency: readCluster(1)
     )
@@ -64,14 +64,16 @@ struct SystemTopology {
     private static func readCluster(_ level: Int) -> Cluster {
         let prefix = "hw.perflevel\(level)"
         return Cluster(
-            cores: Int(sysctlValue("\(prefix).logicalcpu") ?? 0),
-            l1Bytes: sysctlValue("\(prefix).l1dcachesize") ?? 0,
-            l2Bytes: sysctlValue("\(prefix).l2cachesize") ?? 0,
-            coresPerL2: Int(sysctlValue("\(prefix).cpusperl2") ?? 1)
+            cores: Int(Sysctl.value("\(prefix).logicalcpu") ?? 0),
+            l1Bytes: Sysctl.value("\(prefix).l1dcachesize") ?? 0,
+            l2Bytes: Sysctl.value("\(prefix).l2cachesize") ?? 0,
+            coresPerL2: Int(Sysctl.value("\(prefix).cpusperl2") ?? 1)
         )
     }
+}
 
-    private static func sysctlValue(_ name: String) -> UInt64? {
+enum Sysctl {
+    static func value(_ name: String) -> UInt64? {
         var size = 0
         guard sysctlbyname(name, nil, &size, nil, 0) == 0, size <= 8 else { return nil }
         var value: UInt64 = 0
@@ -79,7 +81,7 @@ struct SystemTopology {
         return value
     }
 
-    private static func sysctlString(_ name: String) -> String? {
+    static func string(_ name: String) -> String? {
         var size = 0
         guard sysctlbyname(name, nil, &size, nil, 0) == 0, size > 0 else { return nil }
         var buffer = [CChar](repeating: 0, count: size)

@@ -57,6 +57,27 @@ The read test measures sequential read speed using large files already on the Ma
 
 Data units are 512,000 bytes as the NVMe spec defines them, shown in decimal TB. USB and SATA drives don't pass SMART through to macOS without a third-party driver, so they aren't listed.
 
+## CPU
+
+Shows what macOS and the firmware device tree say about the processor, a live view of every core, and a benchmark.
+
+- **Processor.** Core counts, cluster layout and Apple's name for each core design come from the device tree's `cpus` node, caches from `hw.perflevel*`, and the clock range from the power manager's `voltage-states1-sram` (E-cores) and `voltage-states5-sram` (P-cores) tables. Those tables are in hertz up to the M3 and kilohertz from the M4.
+- **Instruction set.** Every flag under `sysctl hw.optional.arm`, found by walking the tree, so features newer than the app still appear. Absent ones are dimmed.
+- **Cores, live.** Each bar is the share of the last half second a core spent running, with its time-weighted clock in GHz above. Both come from IOReport's `CPU Core Performance States` residencies, no admin rights needed. If the channels don't match the cores one to one, the bars fall back to Mach's per-processor tick counts and the clock is left out.
+- **Benchmark.** Five tests, each on one P-core, one E-core, then every core at once, about 1.5 seconds per cell. Every test keeps its data in L1, so it measures the cores and not memory, and feeds its output back into its input so no work can be skipped.
+
+| Test | Work | Unit |
+| --- | --- | --- |
+| Integer | SHA-256 in plain C, without the SHA instructions | MB/s |
+| Branches | Quicksort of 4,096 random 32-bit integers, refilled each round | M keys/s |
+| Floating point | Mandelbrot escape iterations in scalar doubles | M iter/s |
+| Vector | 32 × 32 single-precision matrix multiply in NEON, counted as 2n³ operations | GFLOPS |
+| Crypto | AES-128 with the AES instructions, four blocks at a time | GB/s |
+
+Results are rates in real units, not a score, so there is nothing to compare against other machines. Scaling is all cores divided by one P-core. The power row is this app's own CPU power averaged over each column.
+
+Core choice is a request, as on the Memory tab. The E-core column is one background-priority thread, which macOS keeps on the E-cores but doesn't run flat out: on the M4 Max the E-cluster sat near 2.0 GHz of its 2.59 GHz during that column, with the thread moving between cores. Read it as what background work gets, not the E-core's ceiling.
+
 ## Launch options
 
-For scripted screenshots and checks: `VU_TAB=power` or `VU_TAB=ssd` opens that tab, `VU_PROCESSOR=gpu` selects the GPU, and `VU_AUTORUN=live|blocks|threads|map` starts a memory run, and `VU_TAB=ssd VU_AUTORUN=read` starts the read test.
+For scripted screenshots and checks: `VU_TAB=power`, `VU_TAB=ssd` or `VU_TAB=cpu` opens that tab, `VU_PROCESSOR=gpu` selects the GPU, `VU_AUTORUN=live|blocks|threads|map` starts a memory run, `VU_TAB=ssd VU_AUTORUN=read` starts the read test, and `VU_TAB=cpu VU_AUTORUN=cpu` starts the CPU benchmark.
